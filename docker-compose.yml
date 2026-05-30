@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: quantflow_db
+    restart: always
+    environment:
+      POSTGRES_USER: quantflow_admin
+      POSTGRES_PASSWORD: quantflow_password_2026
+      POSTGRES_DB: quantflow_db
+    ports:
+      - "6000:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - quantflow_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quantflow_admin -d quantflow_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: quantflow_backend
+    restart: always
+    ports:
+      - "8002:8000"
+    volumes:
+      - .:/app
+    environment:
+      DATABASE_URL: postgresql://quantflow_admin:quantflow_password_2026@db:5432/quantflow_db
+      ENV: development
+      PYTHONPATH: /app/src
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - quantflow_network
+
+volumes:
+  postgres_data:
+
+networks:
+  quantflow_network:
+    driver: bridge

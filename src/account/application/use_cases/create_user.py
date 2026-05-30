@@ -1,0 +1,53 @@
+from account.application.use_cases.common.user_output import UserOutput
+from account.domain.user import User
+from account.domain.user_repository import IUserRepository
+from shared.application.cryptography import ICryptography
+from shared.application.use_cases import UseCase
+
+from dataclasses import dataclass
+
+from shared.domain.exceptions import ConflictException
+
+
+@dataclass
+class CreateUserInput:
+    name: str
+    email: str
+    password: str
+    is_active: bool | None = True
+
+
+@dataclass(frozen=True)
+class CreateUserOutput(UserOutput):
+    pass
+
+
+class CreateUserUseCase(UseCase):
+    def __init__(
+        self,
+        user_repository: IUserRepository,
+        cryptography: ICryptography,
+    ):
+        self.user_repository = user_repository
+        self.cryptography = cryptography
+
+    def execute(self, input: CreateUserInput) -> CreateUserOutput:
+
+        if self.user_repository.find_by_email(input.email):
+            raise ConflictException(f"User with email {input.email} already exists")
+
+        hashed_password = self.cryptography.hash(input.password)
+
+        user = User.create(
+            name=input.name,
+            email=input.email,
+            password=hashed_password,
+            is_active=input.is_active,
+        )
+
+        self.user_repository.insert(user)
+
+        return self.__to_output(user)
+
+    def __to_output(self, user: User):
+        return CreateUserOutput.from_entity(user)
