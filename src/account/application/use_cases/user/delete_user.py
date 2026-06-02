@@ -15,8 +15,8 @@ class DeleteUserUseCase(UseCase):
     def __init__(self, user_repository: IUserRepository):
         self.user_repository = user_repository
 
-    def execute(self, input: DeleteUserInput) -> None:
-        if user := self.user_repository.find_by_id(input.user_id):
-            self.user_repository.delete(user.id.value)
-        else:
+    async def execute(self, input: DeleteUserInput) -> None:
+        user = await self.user_repository.find_by_id(input.user_id)
+        if user is None:
             raise NotFoundException(f"User with id {input.user_id} not found")
+        await self.user_repository.delete(user.id.value)

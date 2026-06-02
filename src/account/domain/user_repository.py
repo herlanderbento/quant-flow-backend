@@ -13,11 +13,14 @@ class UserFilter:
     email: str | None = field(default=None)
     is_active: bool | None = field(default=None)
 
+@dataclass(slots=True, kw_only=True)
 class UserSearchInput(SearchInput[UserFilter]):
-  pass
+    pass
 
+
+@dataclass(slots=True, kw_only=True)
 class UserSearchOutput(SearchOutput[User]):
-  pass
+    pass
 
 class IUserRepository(ISearchableRepository[User, UserId]):
     @abstractmethod

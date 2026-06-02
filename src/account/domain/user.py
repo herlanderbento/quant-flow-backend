@@ -8,7 +8,7 @@ from shared.domain.entity import AggregateRoot
 from shared.domain.value_objects import Uuid
 
 
-@dataclass(slots=True, kw_only=True)
+@dataclass
 class UserCreateCommand:
     name: str
     email: str

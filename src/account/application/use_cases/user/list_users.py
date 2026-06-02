@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from shared.application.paginated_list_output import PaginatedListOutput
 from shared.application.paginated_list_input import PaginatedListInput
 from shared.application.use_cases import UseCase
-from account.application.use_cases.common.user_output import UserOutput
+from account.application.use_cases.user.common.user_output import UserOutput
 from account.domain.user_repository import IUserRepository, UserFilter, UserSearchInput, UserSearchOutput
 
 
@@ -21,10 +21,10 @@ class ListUsersUseCase(UseCase):
     def __init__(self, user_repository: IUserRepository):
         self.user_repository = user_repository
 
-    def execute(self, input: ListUsersInput) -> ListUsersOutput:
-        search_input = UserSearchInput(**input.to_input())
+    async def execute(self, input: ListUsersInput) -> ListUsersOutput:
+        search_input = UserSearchInput(**input.to_search_input())
 
-        search_output = self.user_repository.search(search_input)
+        search_output = await self.user_repository.search(search_input)
 
         return self.__to_output(search_output)
 

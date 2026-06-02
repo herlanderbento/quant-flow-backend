@@ -8,7 +8,7 @@ from shared.domain.exceptions import (
     EntityValidationException,
     NotFoundException,
 )
-from account.application.use_cases.common.user_output import UserOutput
+from account.application.use_cases.user.common.user_output import UserOutput
 from account.domain.user import User
 from account.domain.user_repository import IUserRepository
 
@@ -36,8 +36,8 @@ class UpdateUserUseCase(UseCase):
         self.user_repo = user_repo
         self.cryptography = cryptography
 
-    def execute(self, input: UpdateUserInput) -> UpdateUserOutput:
-        user = self.user_repo.find_by_id(input.id)
+    async def execute(self, input: UpdateUserInput) -> UpdateUserOutput:
+        user = await self.user_repo.find_by_id(input.id)
 
         if user is None:
             raise NotFoundException(f"User with id {input.id} not found")
@@ -46,7 +46,7 @@ class UpdateUserUseCase(UseCase):
             user.change_name(input.name)
 
         if input.email != None and input.email != user.email:
-            user_with_same_email = self.user_repo.find_by_email(input.email)
+            user_with_same_email = await self.user_repo.find_by_email(input.email)
 
             if user_with_same_email:
                 raise ConflictException(f"User with email {input.email} already exists")
@@ -66,7 +66,7 @@ class UpdateUserUseCase(UseCase):
         if user.notification.has_errors():
             raise EntityValidationException(user.notification.errors)
 
-        self.user_repo.update(user)
+        await self.user_repo.update(user)
 
         return self.__to_output(user)
 

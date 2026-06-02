@@ -30,19 +30,12 @@ class SearchInput(Generic[Filter]):
     init_sort_dir: Optional[InitVar[SortDirectionValues | SortDirection | None]] = None
     init_filter: Optional[InitVar[Filter | None]] = None
 
-    def __post_init__(
-        self,
-        init_page: int | None,
-        init_per_page: int | None,
-        init_sort: str | None,
-        init_sort_dir: SortDirectionValues | SortDirection | None,
-        init_filter: Filter | None,
-    ):
-        self._normalize_page(init_page)
-        self._normalize_per_page(init_per_page)
-        self._normalize_sort(init_sort)
-        self._normalize_sort_dir(init_sort_dir)
-        self._normalize_filter(init_filter)
+    def __post_init__(self):
+        self._normalize_page(self.init_page)
+        self._normalize_per_page(self.init_per_page)
+        self._normalize_sort(self.init_sort)
+        self._normalize_sort_dir(self.init_sort_dir)
+        self._normalize_filter(self.init_filter)
 
     def _normalize_page(self, page: int | None):
         page = _int_or_none(page)

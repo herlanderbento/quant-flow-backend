@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from account.application.use_cases.common.user_output import UserOutput
+from account.application.use_cases.user.common.user_output import UserOutput
 from account.domain.user import User, UserId
 from account.domain.user_repository import IUserRepository
 from shared.application.use_cases import UseCase
@@ -24,11 +24,11 @@ class GetUserUseCase(UseCase):
     ):
         self.user_repository = user_repository
 
-    def execute(self, input: GetUserInput) -> GetUserOutput:
-        if user := self.user_repository.find_by_id(input.user_id):
+    async def execute(self, input: GetUserInput) -> GetUserOutput:
+        user = await self.user_repository.find_by_id(input.user_id.value)
+        if user is not None:
             return self.__to_output(user)
-        else:
-            raise NotFoundException(input.user_id, User)
+        raise NotFoundException(f"User with id {input.user_id} not found")
 
     def __to_output(self, entity: User) -> GetUserOutput:
         return GetUserOutput.from_entity(entity)

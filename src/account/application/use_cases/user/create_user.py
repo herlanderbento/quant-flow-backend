@@ -1,5 +1,5 @@
-from account.application.use_cases.common.user_output import UserOutput
-from account.domain.user import User
+from account.application.use_cases.user.common.user_output import UserOutput
+from account.domain.user import User, UserCreateCommand
 from account.domain.user_repository import IUserRepository
 from shared.application.cryptography import ICryptography
 from shared.application.use_cases import UseCase
@@ -31,21 +31,22 @@ class CreateUserUseCase(UseCase):
         self.user_repository = user_repository
         self.cryptography = cryptography
 
-    def execute(self, input: CreateUserInput) -> CreateUserOutput:
+    async def execute(self, input: CreateUserInput) -> CreateUserOutput:
 
-        if self.user_repository.find_by_email(input.email):
+        if await self.user_repository.find_by_email(input.email):
             raise ConflictException(f"User with email {input.email} already exists")
 
         hashed_password = self.cryptography.hash(input.password)
 
-        user = User.create(
+        command = UserCreateCommand(
             name=input.name,
             email=input.email,
             password=hashed_password,
             is_active=input.is_active,
         )
+        user = User.create(command)
 
-        self.user_repository.insert(user)
+        await self.user_repository.insert(user)
 
         return self.__to_output(user)
 
