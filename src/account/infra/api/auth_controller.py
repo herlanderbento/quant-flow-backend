@@ -41,10 +41,9 @@ async def login(
         )
     )
 
-    user_data = UserPresenter.from_output(output.user)
     response = JSONResponse(
         status_code=status.HTTP_200_OK,
-        content=user_data.model_dump(mode="json"),
+        content=UserPresenter.from_output(output.user).model_dump(mode="json"),
     )
     set_auth_cookies(response, output.access_token, output.refresh_token)
     return response

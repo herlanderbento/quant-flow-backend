@@ -1,3 +1,4 @@
+from pydantic import EmailStr
 from account.application.use_cases.user.common.user_output import UserOutput
 from account.domain.user import User, UserCreateCommand
 from account.domain.user_repository import IUserRepository
@@ -12,9 +13,8 @@ from shared.domain.exceptions import ConflictException
 @dataclass
 class CreateUserInput:
     name: str
-    email: str
+    email: EmailStr
     password: str
-    is_active: bool | None = True
 
 
 @dataclass(frozen=True)
@@ -40,9 +40,8 @@ class CreateUserUseCase(UseCase):
 
         command = UserCreateCommand(
             name=input.name,
-            email=input.email,
+            email=str(input.email),
             password=hashed_password,
-            is_active=input.is_active,
         )
         user = User.create(command)
 

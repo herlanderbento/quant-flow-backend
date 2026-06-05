@@ -59,14 +59,14 @@ class UserPostgresRepository(IUserRepository):
         return _to_entity(model) if model else None
 
     async def find_all(self) -> List[User]:
-        result = await self.session.execute(select(UserModel))
-        return [_to_entity(model) for model in result.scalars().all()]
+        models = await self.session.execute(select(UserModel))
+        return [_to_entity(model) for model in models.scalars().all()]
 
     async def find_by_ids(self, ids: List[uuid.UUID]) -> List[User]:
-        result = await self.session.execute(
+        models = await self.session.execute(
             select(UserModel).where(UserModel.id.in_(ids))
         )
-        return [_to_entity(model) for model in result.scalars().all()]
+        return [_to_entity(model) for model in models.scalars().all()]
 
     async def find_by_email(self, email: str) -> Optional[User]:
         result = await self.session.execute(

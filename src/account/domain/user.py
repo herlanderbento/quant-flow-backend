@@ -13,7 +13,6 @@ class UserCreateCommand:
     name: str
     email: str
     password: str
-    is_active: bool | None = True
 
 
 class UserId(Uuid):
@@ -40,7 +39,7 @@ class User(AggregateRoot):
             name=command.name,
             email=command.email,
             password=command.password,
-            is_active=command.is_active
+            is_active=True
         )
 
     @property
