@@ -10,9 +10,9 @@ from shared.domain.search_output import SearchOutput
 
 @dataclass
 class ExchangeCredentialFilter:
-    user_id: UserId | None = None
     exchange_name: str | None = None
     is_testnet: bool | None = None
+    is_active: bool | None = None
 
 
 @dataclass(slots=True, kw_only=True)

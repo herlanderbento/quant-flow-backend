@@ -7,7 +7,7 @@ from account.application.use_cases.user.authenticate_user import (
     AuthenticateUserInput,
     AuthenticateUserUseCase,
 )
-from account.infra.api.user_presenter import UserPresenter
+from account.infra.api.user.user_presenter import UserPresenter
 from account.infra.db.user_postgres_repository import UserPostgresRepository
 from shared.infra.api.auth_cookies import clear_auth_cookies, set_auth_cookies
 from shared.infra.cryptography.bcrypt_hasher import BcryptHasher

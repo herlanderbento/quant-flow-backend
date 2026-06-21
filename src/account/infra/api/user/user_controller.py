@@ -1,71 +1,65 @@
 from uuid import UUID
-
-
 from fastapi import APIRouter, Depends, Query, Response, status
-
 from pydantic import BaseModel, EmailStr
-
 from sqlalchemy.ext.asyncio import AsyncSession
-
-
 from account.application.use_cases.user.create_user import (
     CreateUserInput,
     CreateUserUseCase,
 )
-
 from account.application.use_cases.user.delete_user import (
     DeleteUserInput,
     DeleteUserUseCase,
 )
-
 from account.application.use_cases.user.get_user import GetUserInput, GetUserUseCase
-
 from account.application.use_cases.user.list_users import (
     ListUsersInput,
     ListUsersUseCase,
 )
-
 from account.application.use_cases.user.update_user import (
     UpdateUserInput,
     UpdateUserUseCase,
 )
-
 from account.domain.user import UserId
-
 from account.domain.user_repository import UserFilter
-
-from account.infra.api.user_presenter import UserCollectionPresenter, UserPresenter
-
+from account.infra.api.user.user_presenter import UserCollectionPresenter, UserPresenter
 from account.infra.db.user_postgres_repository import UserPostgresRepository
-
 from shared.infra.api.auth_dependencies import AuthContext, require_authenticated
-
 from shared.infra.cryptography.bcrypt_hasher import BcryptHasher
-
 from shared.infra.db.database import get_db_session
 
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
+class CreateUserRequest(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+
+
+class UpdateUserRequest(BaseModel):
+    name: str | None = None
+    email: EmailStr | None = None
+    password: str | None = None
+    is_active: bool | None = None
+
+
 @router.post("", response_model=UserPresenter, status_code=status.HTTP_201_CREATED)
 async def create_user(
-    request: BaseModel,
+    request: CreateUserRequest,
     session: AsyncSession = Depends(get_db_session),
 ):
-
     user_repo = UserPostgresRepository(session)
-
     cryptography = BcryptHasher()
-
     use_case = CreateUserUseCase(user_repo, cryptography)
 
     output = await use_case.execute(
         CreateUserInput(
-            **request.model_dump(),
+            name=request.name,
+            email=str(request.email),
+            password=request.password,
         )
     )
-
     return UserPresenter.from_output(output)
 
 
@@ -124,21 +118,19 @@ async def list_users(
 )
 async def update_user(
     user_id: UUID,
-    request: BaseModel,
+    request: UpdateUserRequest,
     session: AsyncSession = Depends(get_db_session),
     _auth: AuthContext = Depends(require_authenticated),
 ):
-
     user_repo = UserPostgresRepository(session)
-
     cryptography = BcryptHasher()
-
     use_case = UpdateUserUseCase(user_repo, cryptography)
 
-    output = await use_case.execute(
-        UpdateUserInput(id=user_id, **request.model_dump(exclude_none=True))
-    )
+    payload = request.model_dump(exclude_none=True)
+    if "email" in payload:
+        payload["email"] = str(payload["email"])
 
+    output = await use_case.execute(UpdateUserInput(id=user_id, **payload))
     return UserPresenter.from_output(output)
 
 

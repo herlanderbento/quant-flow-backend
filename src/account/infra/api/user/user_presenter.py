@@ -1,8 +1,6 @@
 from datetime import datetime
 from uuid import UUID
-
 from pydantic import BaseModel, ConfigDict, EmailStr
-
 from account.application.use_cases.user.common.user_output import UserOutput
 from account.application.use_cases.user.list_users import ListUsersOutput
 

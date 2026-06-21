@@ -10,8 +10,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from account.infra.api.auth_controller import router as auth_router
-from account.infra.api.user_controller import router as user_router
+from account.infra.api.user.auth_controller import router as auth_router
+from account.infra.api.user.user_controller import router as user_router
 from account.infra.db.sql_models import Base as AccountBase
 from shared.infra.api.exception_handlers import register_exception_handlers
 from shared.infra.db.database import engine, Base

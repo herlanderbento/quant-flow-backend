@@ -13,7 +13,7 @@ from shared.domain.exceptions import ConflictException
 @dataclass
 class CreateUserInput:
     name: str
-    email: EmailStr
+    email: str
     password: str
 
 
@@ -40,7 +40,7 @@ class CreateUserUseCase(UseCase):
 
         command = UserCreateCommand(
             name=input.name,
-            email=str(input.email),
+            email=input.email,
             password=hashed_password,
         )
         user = User.create(command)

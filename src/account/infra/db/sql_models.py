@@ -62,6 +62,7 @@ class ExchangeCredentialModel(Base):
     api_key: Mapped[str] = mapped_column(String(255), nullable=False)
     api_secret_encrypted: Mapped[str] = mapped_column(String(512), nullable=False)
     is_testnet: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_active: Mapped[bool] = mapped_column(Boolean)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped["UserModel"] = relationship(
