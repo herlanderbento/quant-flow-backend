@@ -1,9 +1,9 @@
 import bcrypt
 
-from shared.application.cryptography import ICryptography
+from shared.application.cryptography import IPasswordHasher
 
 
-class BcryptHasher(ICryptography):
+class BcryptHasher(IPasswordHasher):
     def verify(self, plain: str, hash: str) -> bool:
         return bcrypt.checkpw(plain.encode("utf-8"), hash.encode("utf-8"))
 

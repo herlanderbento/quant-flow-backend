@@ -13,6 +13,7 @@ class ExchangeCredentialOutput:
     api_key: str
     api_secret_encrypted: str
     is_testnet: bool
+    is_active: bool
     created_at: datetime.datetime
     updated_at: datetime.datetime | None
 
@@ -27,6 +28,7 @@ class ExchangeCredentialOutput:
             api_key=user_api_key.api_key,
             api_secret_encrypted=user_api_key.api_secret_encrypted,
             is_testnet=user_api_key.is_testnet,
+            is_active=user_api_key.is_active,
             created_at=user_api_key.created_at,
             updated_at=user_api_key.updated_at,
         )

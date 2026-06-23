@@ -1,15 +1,24 @@
-from fastapi import APIRouter, Depends, Query, status
-from pydantic import BaseModel
+from typing import Annotated
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, Query, Response, status
+from pydantic import BaseModel, StringConstraints
 from sqlalchemy.ext.asyncio import AsyncSession
 from account.application.use_cases.exchange_credential.create_exchange_credential import (
     CreateExchangeCredentialInput,
     CreateExchangeCredentialUseCase,
 )
+from account.application.use_cases.exchange_credential.delete_exchange_credential import (
+    DeleteExchangeCredentialInput,
+    DeleteExchangeCredentialUseCase,
+)
 from account.application.use_cases.exchange_credential.get_exchange_credentials_by_user import (
     GetExchangeCredentialsByUserInput,
     GetExchangeCredentialsByUserUseCase,
 )
+from account.domain.exchange_credential import ExchangeCredentialId
 from account.domain.exchange_credential_repository import ExchangeCredentialFilter
+from account.domain.user import UserId
 from account.infra.api.exchange_credential.exchange_credential_presenter import (
     ExchangeCredentialCollectionPresenter,
     ExchangeCredentialPresenter,
@@ -19,23 +28,26 @@ from account.infra.db.exchange_credential_postgres_repository import (
 )
 from account.infra.db.user_postgres_repository import UserPostgresRepository
 from shared.infra.api.auth_dependencies import AuthContext, require_authenticated
-from shared.infra.cryptography.bcrypt_hasher import BcryptHasher
+from shared.infra.cryptography.fernet_encryption import FernetEncryption
 from shared.infra.db.database import get_db_session
 
 router = APIRouter(prefix="/exchange-credentials", tags=["Exchange Credentials"])
 
 
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
 class CreateExchangeCredentialRequest(BaseModel):
-    exchange_name: str
-    api_key: str
-    api_secret_encrypted: str
+    exchange_name: NonEmptyStr
+    api_key: NonEmptyStr
+    api_secret: NonEmptyStr
     is_testnet: bool
 
 
 class UpdateExchangeCredentialRequest(BaseModel):
-    exchange_name: str | None = None
-    api_key: str | None = None
-    api_secret_encrypted: str | None = None
+    exchange_name: NonEmptyStr | None = None
+    api_key: NonEmptyStr | None = None
+    api_secret: NonEmptyStr | None = None
     is_testnet: bool | None = None
 
 
@@ -49,18 +61,18 @@ async def create_exchange_credential(
 ):
     exchange_credential_repo = ExchangeCredentialPostgresRepository(session)
     user_repo = UserPostgresRepository(session)
-    cryptography = BcryptHasher()
+    encryption = FernetEncryption()
 
     use_case = CreateExchangeCredentialUseCase(
-        exchange_credential_repo, cryptography, user_repo
+        exchange_credential_repo, encryption, user_repo
     )
 
     output = await use_case.execute(
         CreateExchangeCredentialInput(
-            user_id=_auth.user_id,
+            user_id=UserId(value=_auth.user_id),
             exchange_name=request.exchange_name,
             api_key=request.api_key,
-            api_secret_encrypted=request.api_secret_encrypted,
+            api_secret=request.api_secret,
             is_testnet=request.is_testnet,
         )
     )
@@ -89,7 +101,7 @@ async def get_exchange_credentials_by_user(
 
     output = await use_case.execute(
         GetExchangeCredentialsByUserInput(
-            user_id=_auth.user_id,
+            user_id=UserId(value=_auth.user_id),
             page=page,
             per_page=per_page,
             sort=sort,
@@ -100,3 +112,19 @@ async def get_exchange_credentials_by_user(
         )
     )
     return ExchangeCredentialCollectionPresenter.from_output(output)
+
+
+@router.delete("/{exchange_credential_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_exchange_credential(
+    exchange_credential_id: UUID,
+    session: AsyncSession = Depends(get_db_session),
+    _auth: AuthContext = Depends(require_authenticated),
+):
+    exchange_credential_repo = ExchangeCredentialPostgresRepository(session)
+    use_case = DeleteExchangeCredentialUseCase(exchange_credential_repo)
+    await use_case.execute(
+        DeleteExchangeCredentialInput(
+            id=ExchangeCredentialId(value=exchange_credential_id)
+        )
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

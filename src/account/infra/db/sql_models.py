@@ -1,11 +1,13 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, List
-from sqlalchemy import String, Boolean, ForeignKey, DateTime
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from shared.infra.db.database import Base
+from wallet.infra.db.sql_models import WalletSnapshotModel
 
 if TYPE_CHECKING:
     from trader.infra.db.sql_models import BotConfigModel
@@ -14,6 +16,10 @@ if TYPE_CHECKING:
 CASCADE_ALL_DELETE_ORPHAN = "all, delete-orphan"
 FK_USERS_ID = "users.id"
 FK_EXCHANGE_CREDENTIALS_ID = "exchange_credentials.id"
+
+
+def utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class UserModel(Base):
@@ -27,12 +33,10 @@ class UserModel(Base):
     password: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow
+        DateTime(timezone=True), default=utcnow
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
     )
 
     # Relationships
@@ -46,6 +50,9 @@ class UserModel(Base):
     )
     bots: Mapped[List["BotConfigModel"]] = relationship(
         "BotConfigModel", back_populates="user"
+    )
+    wallet_snapshots: Mapped[List["WalletSnapshotModel"]] = relationship(
+        "WalletSnapshotModel", back_populates="user", cascade=CASCADE_ALL_DELETE_ORPHAN
     )
 
 
@@ -62,9 +69,15 @@ class ExchangeCredentialModel(Base):
     api_key: Mapped[str] = mapped_column(String(255), nullable=False)
     api_secret_encrypted: Mapped[str] = mapped_column(String(512), nullable=False)
     is_testnet: Mapped[bool] = mapped_column(Boolean, default=True)
-    is_active: Mapped[bool] = mapped_column(Boolean)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
+    # Relationships
     user: Mapped["UserModel"] = relationship(
         "UserModel", back_populates="exchange_credentials"
     )

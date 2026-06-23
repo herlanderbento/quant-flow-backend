@@ -6,15 +6,17 @@ from account.domain.exchange_credential_repository import (
     IExchangeCredentialRepository,
 )
 from account.domain.user import UserId
+from account.domain.user_repository import IUserRepository
 from shared.application.use_cases import UseCase
 from shared.application.paginated_list_input import PaginatedListInput
 from shared.application.paginated_list_output import PaginatedListOutput
+from shared.domain.exceptions import NotFoundException
 from account.application.use_cases.exchange_credential.common.exchange_credential_output import (
     ExchangeCredentialOutput,
 )
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, kw_only=True)
 class GetExchangeCredentialsByUserInput(PaginatedListInput[ExchangeCredentialFilter]):
     user_id: UserId
 
@@ -25,17 +27,25 @@ class GetExchangeCredentialsByUserOutput(PaginatedListOutput[ExchangeCredentialO
 
 
 class GetExchangeCredentialsByUserUseCase(UseCase):
-    def __init__(self, exchange_credential_repository: IExchangeCredentialRepository):
+    def __init__(
+        self,
+        exchange_credential_repository: IExchangeCredentialRepository,
+        user_repository: IUserRepository,
+    ):
         self.exchange_credential_repository = exchange_credential_repository
+        self.user_repository = user_repository
 
-    def execute(
+    async def execute(
         self, input: GetExchangeCredentialsByUserInput
     ) -> GetExchangeCredentialsByUserOutput:
 
-        search_input = ExchangeCredentialSearchInput(**input.to_input())
+        if not await self.user_repository.find_by_id(input.user_id.value):
+            raise NotFoundException(f"User with id {input.user_id} not found")
 
-        search_output = self.exchange_credential_repository.find_by_user_id(
-            input.user_id, search_input
+        search_input = ExchangeCredentialSearchInput(**input.to_search_input())
+
+        search_output = await self.exchange_credential_repository.find_by_user_id(
+            input.user_id.value, search_input
         )
 
         return self.__to_output(search_output)

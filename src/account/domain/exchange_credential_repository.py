@@ -35,7 +35,7 @@ class IExchangeCredentialRepository(
         raise NotImplementedError()
 
     @abstractmethod
-    def find_by_user_exchange(
-        self, user_id: UserId, exchange_name: str, is_testnet: bool
-    ) -> ExchangeCredential | None:
+    def find_active_by_user_exchange(
+            self, user_id: UserId, exchange_name: str, is_testnet: bool
+    ) -> list[ExchangeCredential]:
         raise NotImplementedError()

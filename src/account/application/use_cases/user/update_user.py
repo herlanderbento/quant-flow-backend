@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from shared.application.cryptography import ICryptography
+from shared.application.cryptography import IPasswordHasher
 from shared.application.use_cases import UseCase
 from shared.domain.exceptions import (
     ConflictException,
@@ -31,10 +31,10 @@ class UpdateUserUseCase(UseCase):
     def __init__(
         self,
         user_repo: IUserRepository,
-        cryptography: ICryptography,
+        password_hasher: IPasswordHasher,
     ):
         self.user_repo = user_repo
-        self.cryptography = cryptography
+        self.password_hasher = password_hasher
 
     async def execute(self, input: UpdateUserInput) -> UpdateUserOutput:
         user = await self.user_repo.find_by_id(input.id)
@@ -54,7 +54,7 @@ class UpdateUserUseCase(UseCase):
             user.change_email(input.email)
 
         if input.password is not None:
-            hashed_password = self.cryptography.hash(input.password)
+            hashed_password = self.password_hasher.hash(input.password)
             user.change_password(hashed_password)
 
         if input.is_active is True:

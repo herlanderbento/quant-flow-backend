@@ -1,8 +1,7 @@
-from pydantic import EmailStr
 from account.application.use_cases.user.common.user_output import UserOutput
 from account.domain.user import User, UserCreateCommand
 from account.domain.user_repository import IUserRepository
-from shared.application.cryptography import ICryptography
+from shared.application.cryptography import IPasswordHasher
 from shared.application.use_cases import UseCase
 
 from dataclasses import dataclass
@@ -26,17 +25,17 @@ class CreateUserUseCase(UseCase):
     def __init__(
         self,
         user_repository: IUserRepository,
-        cryptography: ICryptography,
+        password_hasher: IPasswordHasher,
     ):
         self.user_repository = user_repository
-        self.cryptography = cryptography
+        self.password_hasher = password_hasher
 
     async def execute(self, input: CreateUserInput) -> CreateUserOutput:
 
         if await self.user_repository.find_by_email(input.email):
             raise ConflictException(f"User with email {input.email} already exists")
 
-        hashed_password = self.cryptography.hash(input.password)
+        hashed_password = self.password_hasher.hash(input.password)
 
         command = UserCreateCommand(
             name=input.name,

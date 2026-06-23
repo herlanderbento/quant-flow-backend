@@ -9,7 +9,7 @@ from account.domain.exchange_credential import (
 )
 from account.domain.exchange_credential_repository import IExchangeCredentialRepository
 from account.domain.user_repository import IUserRepository
-from shared.application.cryptography import ICryptography
+from shared.application.cryptography import IEncryption
 from shared.application.use_cases import UseCase
 from shared.domain.exceptions import NotFoundException
 
@@ -19,7 +19,7 @@ class CreateExchangeCredentialInput:
     user_id: UserId
     exchange_name: str
     api_key: str
-    api_secret_encrypted: str
+    api_secret: str
     is_testnet: bool
 
 
@@ -32,31 +32,33 @@ class CreateExchangeCredentialUseCase(UseCase):
     def __init__(
         self,
         exchange_credential_repository: IExchangeCredentialRepository,
-        cryptography: ICryptography,
+        encryption: IEncryption,
         user_repository: IUserRepository,
     ):
         self.exchange_credential_repository = exchange_credential_repository
-        self.cryptography = cryptography
+        self.encryption = encryption
         self.user_repository = user_repository
 
-    def execute(
+    async def execute(
         self, input: CreateExchangeCredentialInput
     ) -> CreateExchangeCredentialOutput:
 
-        if not self.user_repository.find_by_id(input.user_id):
+        if not await self.user_repository.find_by_id(input.user_id.value):
             raise NotFoundException(f"User with id {input.user_id} not found")
 
-        credential = self.exchange_credential_repository.find_by_user_exchange(
-            input.user_id,
-            input.exchange_name,
-            input.is_testnet,
+        active_credentials = (
+            await self.exchange_credential_repository.find_active_by_user_exchange(
+                input.user_id.value,
+                input.exchange_name,
+                input.is_testnet,
+            )
         )
 
-        if credential:
+        for credential in active_credentials:
             credential.deactivate()
-            self.exchange_credential_repository.update(credential)
+            await self.exchange_credential_repository.update(credential)
 
-        secret_encrypted = self.cryptography.hash(input.api_secret_encrypted)
+        secret_encrypted = self.encryption.encrypt(input.api_secret)
 
         command = ExchangeCredentialCreateCommand(
             user_id=input.user_id,
@@ -68,7 +70,7 @@ class CreateExchangeCredentialUseCase(UseCase):
 
         exchange_credential = ExchangeCredential.create(command)
 
-        self.exchange_credential_repository.insert(exchange_credential)
+        await self.exchange_credential_repository.insert(exchange_credential)
 
         return self.__to_output(exchange_credential)
 

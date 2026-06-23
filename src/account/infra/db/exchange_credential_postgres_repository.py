@@ -1,5 +1,4 @@
-from ast import List
-from typing import Optional, Type
+from typing import List, Optional, Type
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -122,18 +121,18 @@ class ExchangeCredentialPostgresRepository(IExchangeCredentialRepository):
             per_page=props.per_page,
         )
 
-    async def find_by_user_exchange(
+    async def find_active_by_user_exchange(
         self, user_id: UserId, exchange_name: str, is_testnet: bool
-    ) -> Optional[ExchangeCredential]:
+    ) -> List[ExchangeCredential]:
         result = await self.session.execute(
             select(ExchangeCredentialModel).where(
                 ExchangeCredentialModel.user_id == user_id,
                 ExchangeCredentialModel.exchange_name == exchange_name,
                 ExchangeCredentialModel.is_testnet == is_testnet,
+                ExchangeCredentialModel.is_active.is_(True),
             )
         )
-        model = result.scalar_one_or_none()
-        return _to_entity(model) if model else None
+        return [_to_entity(model) for model in result.scalars().all()]
 
     async def search(
         self, props: ExchangeCredentialSearchInput

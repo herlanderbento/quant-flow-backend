@@ -1,16 +1,21 @@
 import uuid
-from datetime import datetime, date
+from datetime import date, datetime, timezone
 from typing import TYPE_CHECKING
-from sqlalchemy import String, Numeric, ForeignKey, DateTime, Date
-from sqlalchemy.dialects.postgresql import UUID
+
+from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.dialects.postgresql import UUID
 
 from shared.infra.db.database import Base
 
-FK_USERS_ID = "users.id"
-
 if TYPE_CHECKING:
     from account.infra.db.sql_models import UserModel
+
+FK_USERS_ID = "users.id"
+
+
+def utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class WalletModel(Base):
@@ -26,11 +31,10 @@ class WalletModel(Base):
     free_balance: Mapped[float] = mapped_column(Numeric(18, 8), default=0.0)
     locked_balance: Mapped[float] = mapped_column(Numeric(18, 8), default=0.0)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
     )
 
+    # Relationships
     user: Mapped["UserModel"] = relationship("UserModel", back_populates="wallets")
 
 
@@ -45,3 +49,9 @@ class WalletSnapshotModel(Base):
     )
     total_equity_usdt: Mapped[float] = mapped_column(Numeric(18, 8), nullable=False)
     snapshot_date: Mapped[date] = mapped_column(Date, default=date.today)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
+
+    # Relationships
+    user: Mapped["UserModel"] = relationship("UserModel", back_populates="wallet_snapshots")

@@ -1,34 +1,42 @@
 from typing import AsyncGenerator
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import DeclarativeBase
 
 from shared.infra.db.config import settings
 
-# Replace the traditional scheme with the async one if needed
 DATABASE_URL = settings.DATABASE_URL
-if DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
 
-# Create the SQLAlchemy async engine
+# Ensure correct async driver
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+# Engine async
 engine = create_async_engine(
     DATABASE_URL,
-    echo=False,  # Set to True to see generated SQL in the Docker terminal
+    echo=settings.ENV == "development",  # SQL visible only in development
     pool_size=20,
-    max_overflow=10
+    max_overflow=10,
 )
 
-# Async session factory
+# Session factory
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
-    expire_on_commit=False
+    expire_on_commit=False,
 )
 
-# Declarative base for models to inherit from
+
+# Base declarative shared by all modules
 class Base(DeclarativeBase):
     pass
 
-# Dependency injection for FastAPI endpoints
+
+# Dependency injection for FastAPI
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         try:

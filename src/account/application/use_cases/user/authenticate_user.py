@@ -4,7 +4,7 @@ from account.application.use_cases.user.common.user_output import UserOutput
 from account.domain.user import User
 from shared.application.use_cases import UseCase
 from account.domain.user_repository import IUserRepository
-from shared.application.cryptography import ICryptography
+from shared.application.cryptography import IPasswordHasher
 from shared.application.token_generator import ITokenGenerator
 from shared.domain.exceptions import UnauthorizedException
 
@@ -27,11 +27,11 @@ class AuthenticateUserUseCase(UseCase):
         self,
         user_repository: IUserRepository,
         token_generator: ITokenGenerator,
-        cryptography: ICryptography,
+        password_hasher: IPasswordHasher,
     ):
         self.user_repository = user_repository
         self.token_generator = token_generator
-        self.cryptography = cryptography
+        self.password_hasher = password_hasher
 
     async def execute(self, input: AuthenticateUserInput) -> AuthenticateUserOutput:
         user = await self.user_repository.find_by_email(input.email)
@@ -39,7 +39,7 @@ class AuthenticateUserUseCase(UseCase):
         if user is None:
             raise UnauthorizedException("Password or email is incorrect")
 
-        if not self.cryptography.verify(input.password, user.password):
+        if not self.password_hasher.verify(input.password, user.password):
             raise UnauthorizedException("Password or email is incorrect")
 
         return self.__to_output(user)
