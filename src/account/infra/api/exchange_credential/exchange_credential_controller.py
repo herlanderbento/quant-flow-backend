@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
 from pydantic import BaseModel, StringConstraints
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from account.application.use_cases.exchange_credential.create_exchange_credential import (
     CreateExchangeCredentialInput,
     CreateExchangeCredentialUseCase,
@@ -19,20 +19,20 @@ from account.application.use_cases.exchange_credential.get_exchange_credentials_
 from account.domain.exchange_credential import ExchangeCredentialId
 from account.domain.exchange_credential_repository import ExchangeCredentialFilter
 from account.domain.user import UserId
+
 from account.infra.api.exchange_credential.exchange_credential_presenter import (
     ExchangeCredentialCollectionPresenter,
     ExchangeCredentialPresenter,
 )
-from account.infra.db.exchange_credential_postgres_repository import (
-    ExchangeCredentialPostgresRepository,
-)
-from account.infra.db.user_postgres_repository import UserPostgresRepository
+
 from shared.infra.api.auth_dependencies import AuthContext, require_authenticated
-from shared.infra.cryptography.fernet_encryption import FernetEncryption
-from shared.infra.db.database import get_db_session
+from account.infra.api.exchange_credential.exchange_credential_dependencies import (
+    get_create_exchange_credential_use_case,
+    get_delete_exchange_credential_use_case,
+    get_exchange_credentials_by_user_use_case,
+)
 
 router = APIRouter(prefix="/exchange-credentials", tags=["Exchange Credentials"])
-
 
 NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
@@ -56,17 +56,11 @@ class UpdateExchangeCredentialRequest(BaseModel):
 )
 async def create_exchange_credential(
     request: CreateExchangeCredentialRequest,
-    session: AsyncSession = Depends(get_db_session),
     _auth: AuthContext = Depends(require_authenticated),
+    use_case: CreateExchangeCredentialUseCase = Depends(
+        get_create_exchange_credential_use_case
+    ),
 ):
-    exchange_credential_repo = ExchangeCredentialPostgresRepository(session)
-    user_repo = UserPostgresRepository(session)
-    encryption = FernetEncryption()
-
-    use_case = CreateExchangeCredentialUseCase(
-        exchange_credential_repo, encryption, user_repo
-    )
-
     output = await use_case.execute(
         CreateExchangeCredentialInput(
             user_id=UserId(value=_auth.user_id),
@@ -92,13 +86,11 @@ async def get_exchange_credentials_by_user(
     exchange_name: str | None = Query(default=None),
     is_testnet: bool | None = Query(default=None),
     is_active: bool | None = Query(default=None),
-    session: AsyncSession = Depends(get_db_session),
     _auth: AuthContext = Depends(require_authenticated),
+    use_case: GetExchangeCredentialsByUserUseCase = Depends(
+        get_exchange_credentials_by_user_use_case
+    ),
 ):
-    exchange_credential_repo = ExchangeCredentialPostgresRepository(session)
-    user_repo = UserPostgresRepository(session)
-    use_case = GetExchangeCredentialsByUserUseCase(exchange_credential_repo, user_repo)
-
     output = await use_case.execute(
         GetExchangeCredentialsByUserInput(
             user_id=UserId(value=_auth.user_id),
@@ -117,11 +109,11 @@ async def get_exchange_credentials_by_user(
 @router.delete("/{exchange_credential_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_exchange_credential(
     exchange_credential_id: UUID,
-    session: AsyncSession = Depends(get_db_session),
     _auth: AuthContext = Depends(require_authenticated),
+    use_case: DeleteExchangeCredentialUseCase = Depends(
+        get_delete_exchange_credential_use_case
+    ),
 ):
-    exchange_credential_repo = ExchangeCredentialPostgresRepository(session)
-    use_case = DeleteExchangeCredentialUseCase(exchange_credential_repo)
     await use_case.execute(
         DeleteExchangeCredentialInput(
             id=ExchangeCredentialId(value=exchange_credential_id)
