@@ -40,8 +40,8 @@ class UserModel(Base):
     )
 
     # Relationships
-    exchange_credentials: Mapped[List["ExchangeCredentialModel"]] = relationship(
-        "ExchangeCredentialModel",
+    exchange_credentials: Mapped[List["CredentialModel"]] = relationship(
+        "CredentialModel",
         back_populates="user",
         cascade=CASCADE_ALL_DELETE_ORPHAN,
     )
@@ -56,7 +56,7 @@ class UserModel(Base):
     )
 
 
-class ExchangeCredentialModel(Base):
+class CredentialModel(Base):
     __tablename__ = "exchange_credentials"
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -65,9 +65,9 @@ class ExchangeCredentialModel(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey(FK_USERS_ID, ondelete="CASCADE"), nullable=False
     )
-    exchange_name: Mapped[str] = mapped_column(String(50), default="BINANCE")
+    name: Mapped[str] = mapped_column(String(50), default="BINANCE")
     api_key: Mapped[str] = mapped_column(String(255), nullable=False)
-    api_secret_encrypted: Mapped[str] = mapped_column(String(512), nullable=False)
+    api_secret: Mapped[str] = mapped_column(String(512), nullable=False)
     is_testnet: Mapped[bool] = mapped_column(Boolean, default=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -82,5 +82,5 @@ class ExchangeCredentialModel(Base):
         "UserModel", back_populates="exchange_credentials"
     )
     bots: Mapped[List["BotConfigModel"]] = relationship(
-        "BotConfigModel", back_populates="exchange_credential"
+        "BotConfigModel", back_populates="credential"
     )

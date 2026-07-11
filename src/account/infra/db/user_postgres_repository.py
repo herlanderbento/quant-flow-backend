@@ -45,12 +45,12 @@ class UserPostgresRepository(IUserRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def insert(self, user: User) -> None:
-        self.session.add(_to_model(user))
+    async def insert(self, entity: User) -> None:
+        self.session.add(_to_model(entity))
         await self.session.commit()
 
-    async def bulk_insert(self, users: List[User]) -> None:
-        self.session.add_all(users)
+    async def bulk_insert(self, entities: List[User]) -> None:
+        self.session.add_all(entities)
         await self.session.commit()
 
     async def find_by_id(self, id: uuid.UUID) -> Optional[User]:
@@ -109,16 +109,16 @@ class UserPostgresRepository(IUserRepository):
             per_page=props.per_page,
         )
 
-    async def update(self, user: User) -> None:
+    async def update(self, entity: User) -> None:
         await self.session.execute(
             update(UserModel)
-            .where(UserModel.id == user.id.value)
+            .where(UserModel.id == entity.id.value)
             .values(
-                name=user.name,
-                email=user.email,
-                password=user.password,
-                is_active=user.is_active,
-                updated_at=to_naive_utc(user.updated_at),
+                name=entity.name,
+                email=entity.email,
+                password=entity.password,
+                is_active=entity.is_active,
+                updated_at=to_naive_utc(entity.updated_at),
             )
         )
         await self.session.commit()

@@ -12,7 +12,7 @@ CASCADE_ALL_DELETE_ORPHAN = "all, delete-orphan"
 FK_USERS_ID = "users.id"
 
 if TYPE_CHECKING:
-    from account.infra.db.sql_models import ExchangeCredentialModel, UserModel
+    from account.infra.db.sql_models import CredentialModel, UserModel
 
 
 def utcnow() -> datetime:
@@ -28,10 +28,11 @@ class BotConfigModel(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey(FK_USERS_ID), nullable=False
     )
-    exchange_credential_id: Mapped[uuid.UUID] = mapped_column(
+    credential_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("exchange_credentials.id"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
+    symbol: Mapped[str] = mapped_column(String(20), nullable=False)
     strategy_type: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # 'SCALPER_LSTM', 'SMA_RSI'
@@ -48,8 +49,8 @@ class BotConfigModel(Base):
 
     # Relationships
     user: Mapped["UserModel"] = relationship("UserModel", back_populates="bots")
-    exchange_credential: Mapped["ExchangeCredentialModel"] = relationship(
-        "ExchangeCredentialModel", back_populates="bots"
+    credential: Mapped["CredentialModel"] = relationship(
+        "CredentialModel", back_populates="bots"
     )
     trades: Mapped[List["TradeModel"]] = relationship(
         "TradeModel", back_populates="bot_config", cascade=CASCADE_ALL_DELETE_ORPHAN
@@ -84,7 +85,7 @@ class TradeModel(Base):
     pnl_usd: Mapped[Optional[float]] = mapped_column(Numeric(18, 8), nullable=True)
     pnl_pct: Mapped[Optional[float]] = mapped_column(Numeric(8, 4), nullable=True)
     fee_paid: Mapped[Optional[float]] = mapped_column(Numeric(18, 8), nullable=True)
-    binance_order_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    exchange_order_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     executed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow
     )

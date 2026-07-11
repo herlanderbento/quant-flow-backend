@@ -5,6 +5,8 @@ from fastapi.responses import JSONResponse
 from shared.domain.exceptions import (
     ConflictException,
     EntityValidationException,
+    ForbiddenException,
+    GatewayException,
     InvalidArgumentException,
     InvalidUuidException,
     NotFoundException,
@@ -54,6 +56,14 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(ConflictException)
     async def conflict_handler(_request: Request, exc: ConflictException):
         return _error_response(409, exc)
+
+    @app.exception_handler(ForbiddenException)
+    async def forbidden_handler(_request: Request, exc: ForbiddenException):
+        return _error_response(403, exc)
+
+    @app.exception_handler(GatewayException)
+    async def gateway_handler(_request: Request, exc: GatewayException):
+        return _error_response(502, exc)
 
     @app.exception_handler(EntityValidationException)
     async def validation_handler(_request: Request, exc: EntityValidationException):

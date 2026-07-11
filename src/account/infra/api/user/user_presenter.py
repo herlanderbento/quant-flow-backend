@@ -3,6 +3,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr
 from account.application.use_cases.user.common.user_output import UserOutput
 from account.application.use_cases.user.list_users import ListUsersOutput
+from shared.infra.api.presenter import CollectionPresenter, meta_from_output
 
 
 class UserPresenter(BaseModel):
@@ -27,26 +28,10 @@ class UserPresenter(BaseModel):
         )
 
 
-class MetaPresenter(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    total: int
-    current_page: int
-    per_page: int
-    last_page: int
-
-
-class UserCollectionPresenter(BaseModel):
-    data: list[UserPresenter]
-    meta: MetaPresenter
-
+class UserCollectionPresenter(CollectionPresenter[UserPresenter]):
     @classmethod
     def from_output(cls, output: ListUsersOutput) -> "UserCollectionPresenter":
         return cls(
             data=[UserPresenter.from_output(item) for item in output.items],
-            meta=MetaPresenter(
-                total=output.total,
-                current_page=output.current_page,
-                per_page=output.per_page,
-                last_page=output.last_page,
-            ),
+            meta=meta_from_output(output),
         )
