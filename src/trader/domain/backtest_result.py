@@ -22,6 +22,14 @@ class BacktestCreateCommand:
     max_drawdown_pct: float | None
     win_rate: float | None
     total_trades: int | None
+    timeframe: str | None = None
+    profit_factor: float | None = None
+    expectancy_pct: float | None = None
+    buy_and_hold_return_pct: float | None = None
+    exposure_pct: float | None = None
+    fees_paid: float | None = None
+    taker_fee_rate: float | None = None
+    slippage_bps: float | None = None
 
 
 class BacktestResultId(Uuid):
@@ -41,6 +49,14 @@ class BacktestResult(AggregateRoot):
     max_drawdown_pct: Annotated[float | None, Strict()] = None
     win_rate: Annotated[float | None, Strict()] = None
     total_trades: Annotated[int | None, Strict()] = None
+    timeframe: str | None = None
+    profit_factor: float | None = None
+    expectancy_pct: float | None = None
+    buy_and_hold_return_pct: float | None = None
+    exposure_pct: float | None = None
+    fees_paid: float | None = None
+    taker_fee_rate: float | None = None
+    slippage_bps: float | None = None
     created_at: Annotated[datetime, Strict()] = field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
@@ -58,6 +74,14 @@ class BacktestResult(AggregateRoot):
             max_drawdown_pct=command.max_drawdown_pct,
             win_rate=command.win_rate,
             total_trades=command.total_trades,
+            timeframe=command.timeframe,
+            profit_factor=command.profit_factor,
+            expectancy_pct=command.expectancy_pct,
+            buy_and_hold_return_pct=command.buy_and_hold_return_pct,
+            exposure_pct=command.exposure_pct,
+            fees_paid=command.fees_paid,
+            taker_fee_rate=command.taker_fee_rate,
+            slippage_bps=command.slippage_bps,
         )
         result.validate()
         return result

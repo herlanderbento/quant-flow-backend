@@ -71,7 +71,10 @@ async def get_user(
     _auth: AuthContext = Depends(require_authenticated),
     use_case: GetUserUseCase = Depends(get_get_user_use_case),
 ):
-    output = await use_case.execute(GetUserInput(user_id=UserId(value=user_id)))
+    output = await use_case.execute(GetUserInput(
+            user_id=UserId(value=user_id),
+            requester_id=UserId(value=_auth.user_id),
+        ))
 
     return UserPresenter.from_output(output)
 
@@ -90,6 +93,7 @@ async def list_users(
 ):
 
     search_input = ListUsersInput(
+        requester_id=_auth.user_id,
         page=page,
         per_page=per_page,
         sort=sort,
@@ -119,7 +123,7 @@ async def update_user(
     if "email" in payload:
         payload["email"] = str(payload["email"])
 
-    output = await use_case.execute(UpdateUserInput(id=user_id, **payload))
+    output = await use_case.execute(UpdateUserInput(id=user_id, requester_id=_auth.user_id, **payload))
     return UserPresenter.from_output(output)
 
 
@@ -130,6 +134,6 @@ async def delete_user(
     _auth: AuthContext = Depends(require_authenticated),
 ):
 
-    await use_case.execute(DeleteUserInput(user_id=user_id))
+    await use_case.execute(DeleteUserInput(user_id=user_id, requester_id=_auth.user_id))
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

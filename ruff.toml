@@ -1,0 +1,6 @@
+line-length = 120
+
+[lint.per-file-ignores]
+# These entry points put src/ on sys.path before importing application modules.
+"main.py" = ["E402"]
+"migrations/env.py" = ["E402"]

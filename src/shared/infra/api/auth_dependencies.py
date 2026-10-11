@@ -17,7 +17,7 @@ class AuthContext:
         self.user = user
 
 
-def _decode_access_token(token: str) -> UUID:
+def decode_token(token: str, expected_type: str) -> UUID:
     try:
         payload = jwt.decode(
             token,
@@ -27,7 +27,7 @@ def _decode_access_token(token: str) -> UUID:
     except jwt.PyJWTError as exc:
         raise UnauthorizedException("Invalid or expired token") from exc
 
-    if payload.get("type") != "access":
+    if payload.get("type") != expected_type:
         raise UnauthorizedException("Invalid token type")
 
     return UUID(payload["sub"])
@@ -40,11 +40,11 @@ async def get_current_user(
     if not access_token:
         raise UnauthorizedException("Authentication required")
 
-    user_id = _decode_access_token(access_token)
+    user_id = decode_token(access_token, "access")
     user_repo = UserPostgresRepository(session)
     user = await user_repo.find_by_id(user_id)
 
-    if user is None:
+    if user is None or not user.is_active:
         raise UnauthorizedException("User not authenticated")
 
     return AuthContext(user_id=user_id, user=user)

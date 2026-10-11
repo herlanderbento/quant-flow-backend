@@ -59,8 +59,9 @@ class SyncWalletUseCase(UseCase):
             )
 
         api_secret = self.encryption.decrypt(credential.api_secret)
+        api_key = self.encryption.decrypt(credential.api_key)
         balances = await self.exchange_balance_provider.fetch_balances(
-            credential.api_key, api_secret, credential.is_testnet
+            api_key, api_secret, credential.is_testnet
         )
 
         wallets = []
@@ -75,7 +76,7 @@ class SyncWalletUseCase(UseCase):
 
         total_equity_usdt = (
             await self.exchange_balance_provider.estimate_total_equity_usdt(
-                credential.api_key,
+                api_key,
                 api_secret,
                 credential.is_testnet,
                 balances,

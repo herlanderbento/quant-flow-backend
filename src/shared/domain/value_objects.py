@@ -20,7 +20,7 @@ class Uuid(ValueObject):
 
     def __post_init__(self):
         if isinstance(self.value, str):
-            object.__setattr__(self, "id", PythonUUID(self.value))
+            object.__setattr__(self, "value", PythonUUID(self.value))
         self.__validate()
 
     def __validate(self):

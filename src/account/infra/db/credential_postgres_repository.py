@@ -21,6 +21,7 @@ def _to_model(credential: Credential) -> CredentialModel:
         user_id=credential.user_id.value,
         name=credential.name,
         api_key=credential.api_key,
+        api_key_hint=credential.api_key_hint,
         api_secret=credential.api_secret,
         is_testnet=credential.is_testnet,
         is_active=credential.is_active,
@@ -35,6 +36,7 @@ def _to_entity(model: CredentialModel) -> Credential:
         user_id=UserId(value=model.user_id),
         name=model.name,
         api_key=model.api_key,
+        api_key_hint=model.api_key_hint,
         api_secret=model.api_secret,
         is_testnet=model.is_testnet,
         is_active=model.is_active,
@@ -187,6 +189,7 @@ class CredentialPostgresRepository(ICredentialRepository):
             .values(
                 name=entity.name,
                 api_key=entity.api_key,
+                api_key_hint=entity.api_key_hint,
                 api_secret=entity.api_secret,
                 is_testnet=entity.is_testnet,
                 is_active=entity.is_active,

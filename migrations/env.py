@@ -7,13 +7,14 @@ _src = Path(__file__).resolve().parent.parent / "src"
 if _src.is_dir() and str(_src) not in sys.path:
     sys.path.insert(0, str(_src))
 
-from sqlalchemy import pool
+from sqlalchemy import pool, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 from shared.infra.db.config import settings
 from shared.infra.db.metadata import target_metadata
+from shared.infra.db.migration_lock import MIGRATION_LOCK_ID
 
 config = context.config
 
@@ -49,6 +50,12 @@ def do_run_migrations(connection: Connection) -> None:
         compare_server_default=True,
     )
     with context.begin_transaction():
+        # Serialise concurrent `alembic upgrade` runs (backend and worker both migrate on start).
+        # Transaction-scoped: released on commit/rollback; the next runner then sees the new head.
+        # The timeout bounds only the wait for this lock, not the migrations' own DDL.
+        connection.execute(text("SET LOCAL lock_timeout = '5min'"))
+        connection.execute(text("SELECT pg_advisory_xact_lock(:id)"), {"id": MIGRATION_LOCK_ID})
+        connection.execute(text("SET LOCAL lock_timeout = DEFAULT"))
         context.run_migrations()
 
 

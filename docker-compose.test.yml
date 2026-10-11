@@ -1,0 +1,24 @@
+# Disposable PostgreSQL for integration tests only.
+# Data lives in memory (tmpfs) and disappears when the container stops.
+#   docker compose -f docker-compose.test.yml up -d
+#   docker compose -f docker-compose.test.yml down
+# Own project name: commands on this file can never act on the dev stack.
+name: quantflow_test
+
+services:
+  test_db:
+    image: postgres:15-alpine
+    container_name: quantflow_test_db
+    environment:
+      POSTGRES_USER: quantflow_test
+      POSTGRES_PASSWORD: quantflow_test
+      POSTGRES_DB: postgres
+    ports:
+      - "127.0.0.1:55432:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quantflow_test -d postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 20

@@ -16,11 +16,15 @@ class TradePresenter(BaseModel):
     symbol: str
     side: str
     status: str
-    price_executed: float
+    price_executed: float | None
     quantity: float
+    open_quantity: float | None
     pnl_usd: float | None
     pnl_pct: float | None
+    fee_paid: float | None
     exchange_order_id: str | None
+    exit_price: float | None
+    exit_reason: str | None
     executed_at: datetime
     closed_at: datetime | None
 
@@ -34,9 +38,13 @@ class TradePresenter(BaseModel):
             status=output.status,
             price_executed=output.price_executed,
             quantity=output.quantity,
+            open_quantity=output.open_quantity,
             pnl_usd=output.pnl_usd,
             pnl_pct=output.pnl_pct,
+            fee_paid=output.fee_paid,
             exchange_order_id=output.exchange_order_id,
+            exit_price=output.exit_price,
+            exit_reason=output.exit_reason,
             executed_at=output.executed_at,
             closed_at=output.closed_at,
         )

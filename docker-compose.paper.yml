@@ -1,0 +1,52 @@
+# Isolated paper-trading soak stack: its own persistent database and a worker
+# locked to TRADING_MODE=paper. Does not touch the development database.
+#   docker compose -p quantflow_paper -f docker-compose.paper.yml up -d --build
+# See docs/PAPER_SOAK_TEST.md for the full procedure.
+# Own project name: commands on this file can never act on the dev stack.
+name: quantflow_paper
+
+services:
+  paper_db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: quantflow_paper
+      POSTGRES_PASSWORD: ${PAPER_POSTGRES_PASSWORD:?Set PAPER_POSTGRES_PASSWORD}
+      POSTGRES_DB: quantflow_paper
+    ports:
+      - "127.0.0.1:55433:5432"
+    volumes:
+      - paper_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quantflow_paper -d quantflow_paper"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  paper_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://quantflow_paper:${PAPER_POSTGRES_PASSWORD}@paper_db:5432/quantflow_paper
+      ENCRYPTION_KEY: ${PAPER_ENCRYPTION_KEY:?Set PAPER_ENCRYPTION_KEY}
+      JWT_SECRET_KEY: ${PAPER_JWT_SECRET_KEY:?Set PAPER_JWT_SECRET_KEY}
+      ENV: paper-soak
+      TRADING_MODE: paper
+      LIVE_TRADING_ENABLED: "false"
+      LOG_FORMAT: json
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+    command: sh -c "alembic upgrade head && exec python -m trader.infra.worker"
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "python", "-m", "trader.infra.worker.healthcheck"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    depends_on:
+      paper_db:
+        condition: service_healthy
+
+volumes:
+  paper_pg_data:

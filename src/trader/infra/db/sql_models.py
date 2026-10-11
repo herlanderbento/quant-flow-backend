@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Numeric, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -63,8 +63,21 @@ class BotConfigModel(Base):
     )
 
 
+ACTIVE_TRADE_STATUSES_SQL = "status IN ('PENDING_OPEN', 'OPEN', 'PENDING_CLOSE')"
+
+
 class TradeModel(Base):
     __tablename__ = "trades"
+    __table_args__ = (
+        # At most one non-final trade per bot: the database-level guard against
+        # duplicate entries, including from concurrent workers.
+        Index(
+            "uq_trades_one_active_per_bot",
+            "bot_config_id",
+            unique=True,
+            postgresql_where=text(ACTIVE_TRADE_STATUSES_SQL),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -80,14 +93,31 @@ class TradeModel(Base):
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="OPEN"
     )  # 'OPEN', 'CLOSED', 'CANCELLED'
-    price_executed: Mapped[float] = mapped_column(Numeric(18, 8), nullable=False)
+    client_order_id: Mapped[Optional[str]] = mapped_column(
+        String(64), nullable=True, unique=True
+    )
+    entry_context: Mapped[Optional[dict]] = mapped_column(
+        JSONB(none_as_null=True), nullable=True
+    )
+    price_executed: Mapped[Optional[float]] = mapped_column(Numeric(18, 8), nullable=True)
     quantity: Mapped[float] = mapped_column(Numeric(18, 8), nullable=False)
+    open_quantity: Mapped[Optional[float]] = mapped_column(Numeric(18, 8), nullable=True)
+    entry_cost: Mapped[Optional[float]] = mapped_column(Numeric(18, 8), nullable=True)
     pnl_usd: Mapped[Optional[float]] = mapped_column(Numeric(18, 8), nullable=True)
     pnl_pct: Mapped[Optional[float]] = mapped_column(Numeric(8, 4), nullable=True)
     fee_paid: Mapped[Optional[float]] = mapped_column(Numeric(18, 8), nullable=True)
     exchange_order_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    exit_client_order_id: Mapped[Optional[str]] = mapped_column(
+        String(64), nullable=True, unique=True
+    )
+    exit_order_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    exit_price: Mapped[Optional[float]] = mapped_column(Numeric(18, 8), nullable=True)
+    exit_reason: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     executed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
     )
     closed_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -104,6 +134,12 @@ class TradeModel(Base):
 
 class AIPredictionModel(Base):
     __tablename__ = "ai_predictions"
+    __table_args__ = (
+        UniqueConstraint(
+            "bot_config_id", "mode", "market_candle_close",
+            name="uq_ai_predictions_bot_mode_candle",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -117,7 +153,17 @@ class AIPredictionModel(Base):
     prediction_signal: Mapped[str] = mapped_column(
         String(20), nullable=False
     )  # 'BULLISH', 'BEARISH', 'NEUTRAL'
-    probability: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False)
+    # Null when the model could not produce a prediction (see `reason`).
+    probability: Mapped[Optional[float]] = mapped_column(Numeric(7, 6), nullable=True)
+    # 'shadow': logged only, never used. 'active': drove an ML_SIGNAL bot's decision.
+    mode: Mapped[str] = mapped_column(String(10), nullable=False, default="shadow")
+    market_candle_close: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    feature_candle_close: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    decision: Mapped[Optional[str]] = mapped_column(String(10))  # model's BUY / SELL / HOLD
+    strategy_signal: Mapped[Optional[str]] = mapped_column(String(10))  # signal actually used
+    reason: Mapped[Optional[str]] = mapped_column(String(300))
+    buy_threshold: Mapped[Optional[float]] = mapped_column(Numeric(7, 6))
+    sell_threshold: Mapped[Optional[float]] = mapped_column(Numeric(7, 6))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow
     )
@@ -149,6 +195,14 @@ class BacktestResultModel(Base):
     max_drawdown_pct: Mapped[Optional[float]] = mapped_column(Numeric(8, 4), nullable=True)
     win_rate: Mapped[Optional[float]] = mapped_column(Numeric(8, 4), nullable=True)
     total_trades: Mapped[Optional[int]] = mapped_column(nullable=True)
+    timeframe: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    profit_factor: Mapped[Optional[float]] = mapped_column(Numeric(12, 4), nullable=True)
+    expectancy_pct: Mapped[Optional[float]] = mapped_column(Numeric(12, 4), nullable=True)
+    buy_and_hold_return_pct: Mapped[Optional[float]] = mapped_column(Numeric(12, 4), nullable=True)
+    exposure_pct: Mapped[Optional[float]] = mapped_column(Numeric(8, 4), nullable=True)
+    fees_paid: Mapped[Optional[float]] = mapped_column(Numeric(18, 8), nullable=True)
+    taker_fee_rate: Mapped[Optional[float]] = mapped_column(Numeric(8, 6), nullable=True)
+    slippage_bps: Mapped[Optional[float]] = mapped_column(Numeric(8, 2), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow
     )
@@ -157,3 +211,28 @@ class BacktestResultModel(Base):
     bot_config: Mapped["BotConfigModel"] = relationship(
         "BotConfigModel", back_populates="backtest_results"
     )
+
+class WorkerStatusModel(Base):
+    """Heartbeat and counters of one worker process (one row per process)."""
+
+    __tablename__ = "worker_status"
+
+    worker_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    trading_mode: Mapped[str] = mapped_column(String(10), nullable=False)
+    hostname: Mapped[str] = mapped_column(String(255), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_heartbeat_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_cycle_started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    last_cycle_finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    last_market_data_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    cycles_total: Mapped[int] = mapped_column(nullable=False, default=0)
+    cycle_errors_total: Mapped[int] = mapped_column(nullable=False, default=0)
+    consecutive_failures: Mapped[int] = mapped_column(nullable=False, default=0)
+    max_cycle_gap_seconds: Mapped[float] = mapped_column(Numeric(12, 3), nullable=False, default=0)
+    bots_last_cycle: Mapped[int] = mapped_column(nullable=False, default=0)
+    outcome_counts: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    last_error: Mapped[Optional[str]] = mapped_column(String(500))
+    last_audit_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    audit_issues: Mapped[int] = mapped_column(nullable=False, default=0)
+    audit_details: Mapped[Optional[dict]] = mapped_column(JSONB(none_as_null=True))
+    stopped_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))

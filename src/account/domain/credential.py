@@ -16,6 +16,7 @@ class CredentialCreateCommand:
     api_key: str
     api_secret: str
     is_testnet: bool
+    api_key_hint: str | None = None
 
 
 class CredentialId(Uuid):
@@ -27,10 +28,12 @@ class Credential(AggregateRoot):
     id: CredentialId = field(default_factory=CredentialId)
     user_id: UserId
     name: str
-    api_key: str
-    api_secret: str
+    api_key: str  # encrypted at rest
+    api_secret: str  # encrypted at rest
     is_testnet: bool
     is_active: bool
+    # Last characters of the plaintext key, for display only.
+    api_key_hint: str | None = None
     created_at: Annotated[datetime.datetime, Strict()] = field(
         default_factory=lambda: datetime.datetime.now(datetime.UTC)
     )
@@ -47,6 +50,7 @@ class Credential(AggregateRoot):
             api_secret=command.api_secret,
             is_testnet=command.is_testnet,
             is_active=True,
+            api_key_hint=command.api_key_hint,
         ) 
 
     @property

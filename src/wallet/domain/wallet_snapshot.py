@@ -2,15 +2,15 @@ from dataclasses import dataclass, field
 import datetime
 from datetime import timezone
 from typing import Annotated
-from uuid import UUID
 
 from pydantic import Strict
 
 from account.domain.user import UserId
 from shared.domain.entity import AggregateRoot
+from shared.domain.value_objects import Uuid
 
 
-class WalletSnapshotId(UUID):
+class WalletSnapshotId(Uuid):
     pass
 
 

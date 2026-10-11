@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
-from uuid import UUID
 from shared.domain.entity import AggregateRoot
+from shared.domain.value_objects import Uuid
 from trader.domain.bot import BotId
 from shared.domain.exceptions import InvalidArgumentException
 
@@ -17,7 +17,7 @@ class AIPredictionCreateCommand:
     probability: float
 
 
-class AIPredictionId(UUID):
+class AIPredictionId(Uuid):
     pass
 
 

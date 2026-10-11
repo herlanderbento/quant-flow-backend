@@ -3,7 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from account.domain.user_repository import IUserRepository
 from account.infra.api.user.user_dependencies import get_user_repository
+from shared.infra.db.config import settings
 from shared.infra.db.database import get_db_session
+from trader.application.backtest_engine import BacktestCosts
 from trader.application.use_cases.backtest.create_backtest import CreateBacktestUseCase
 from trader.application.use_cases.backtest.get_backtests_by_user import (
     GetBacktestsByUserUseCase,
@@ -25,7 +27,11 @@ def get_create_backtest_use_case(
     backtest_repo: IBacktestRepository = Depends(get_backtest_repository),
     user_repo: IUserRepository = Depends(get_user_repository),
 ) -> CreateBacktestUseCase:
-    return CreateBacktestUseCase(bot_repo, backtest_repo, user_repo)
+    costs = BacktestCosts(
+        taker_fee_rate=settings.PAPER_TAKER_FEE_RATE,
+        slippage_bps=settings.PAPER_SLIPPAGE_BPS,
+    )
+    return CreateBacktestUseCase(bot_repo, backtest_repo, user_repo, costs)
 
 
 def get_get_backtests_by_user_use_case(

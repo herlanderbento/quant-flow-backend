@@ -5,10 +5,11 @@ services:
     restart: always
     environment:
       POSTGRES_USER: quantflow_admin
-      POSTGRES_PASSWORD: quantflow_password_2026
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: quantflow_db
     ports:
-      - "6000:5432"
+      # Reachable from this machine only.
+      - "127.0.0.1:6000:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -26,15 +27,19 @@ services:
     container_name: quantflow_backend
     restart: always
     ports:
-      - "8002:8000"
+      - "127.0.0.1:8002:8000"
     volumes:
       - ./src:/app/src
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://quantflow_admin:quantflow_password_2026@db:5432/quantflow_db
+      DATABASE_URL: postgresql+asyncpg://quantflow_admin:${POSTGRES_PASSWORD}@db:5432/quantflow_db
       ENV: development
       PYTHONPATH: /app/src
+      # Plain-http local development only.
+      COOKIE_SECURE: "false"
+    # Hot reload is a development convenience; the image itself runs without it.
+    command: sh -c "alembic upgrade head && exec uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
     depends_on:
       db:
         condition: service_healthy
@@ -52,10 +57,19 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://quantflow_admin:quantflow_password_2026@db:5432/quantflow_db
+      DATABASE_URL: postgresql+asyncpg://quantflow_admin:${POSTGRES_PASSWORD}@db:5432/quantflow_db
       ENV: development
       PYTHONPATH: /app/src
-    command: sh -c "alembic upgrade head && python -m trader.infra.worker"
+      TRADING_MODE: paper
+      LIVE_TRADING_ENABLED: "false"
+    command: sh -c "alembic upgrade head && exec python -m trader.infra.worker"
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "python", "-m", "trader.infra.worker.healthcheck"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
     depends_on:
       db:
         condition: service_healthy

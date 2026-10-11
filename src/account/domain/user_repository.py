@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from dataclasses import dataclass, field
+from uuid import UUID
 
 from account.domain.user import User, UserId
 from shared.domain.repository_interface import ISearchableRepository
@@ -12,6 +13,7 @@ class UserFilter:
     name: str | None = field(default=None)
     email: str | None = field(default=None)
     is_active: bool | None = field(default=None)
+    id: UUID | None = field(default=None)
 
 @dataclass(slots=True, kw_only=True)
 class UserSearchInput(SearchInput[UserFilter]):

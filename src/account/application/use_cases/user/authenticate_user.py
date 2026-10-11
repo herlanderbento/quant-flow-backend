@@ -42,6 +42,15 @@ class AuthenticateUserUseCase(UseCase):
         if not self.password_hasher.verify(input.password, user.password):
             raise UnauthorizedException("Password or email is incorrect")
 
+        if not user.is_active:
+            raise UnauthorizedException("User account is inactive")
+
+        return self.__to_output(user)
+
+    def issue_tokens(self, user: User) -> AuthenticateUserOutput:
+        """Fresh token pair for an already authenticated user (used by /auth/refresh)."""
+        if not user.is_active:
+            raise UnauthorizedException("User account is inactive")
         return self.__to_output(user)
 
     def __to_output(self, user: User) -> AuthenticateUserOutput:

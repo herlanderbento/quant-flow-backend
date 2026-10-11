@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from account.domain.user import UserId
 from account.domain.user_repository import IUserRepository
 from shared.application.use_cases import UseCase
-from shared.domain.exceptions import ConflictException, ForbiddenException, NotFoundException
+from shared.domain.exceptions import ForbiddenException, NotFoundException
 from trader.application.use_cases.bot.common.bot_output import BotOutput
 from trader.domain.bot import Bot, BotId
 from trader.domain.repositories.bot_repository import IBotRepository
@@ -23,7 +23,9 @@ class ChangeBotStatusOutput(BotOutput):
 
 class ChangeBotStatusUseCase(UseCase):
     def __init__(
-        self, bot_repository: IBotRepository, user_repository: IUserRepository
+        self, 
+        bot_repository: IBotRepository, 
+        user_repository: IUserRepository
     ):
         self.bot_repository = bot_repository
         self.user_repository = user_repository

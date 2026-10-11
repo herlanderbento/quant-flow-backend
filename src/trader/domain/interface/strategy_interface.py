@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from typing import Dict, Any
 
@@ -12,8 +13,17 @@ class TradeSignal(Enum):
 class MarketData:
     symbol: str
     current_price: float
-    # In the future, candle data (Klines/OHLCV) or precomputed indicators can be passed here
     indicators: Dict[str, Any]
+    # Close time of the last *closed* candle the indicators were computed from.
+    candle_closed_at: datetime | None = None
+    # Closed candles [open_time_ms, open, high, low, close, volume], oldest first,
+    # for strategies that compute their own features (e.g. the ML strategy).
+    candles: list[list[float]] | None = None
+
+# Timeframe the live worker trades on; backtests on other timeframes do not reflect live behaviour.
+LIVE_TIMEFRAME = "1h"
+# Closed candles delivered to strategies (>= the ML feature warm-up).
+SNAPSHOT_CANDLES = 200
 
 class IBotStrategy(ABC):
     """

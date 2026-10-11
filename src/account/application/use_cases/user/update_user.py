@@ -6,6 +6,7 @@ from shared.application.use_cases import UseCase
 from shared.domain.exceptions import (
     ConflictException,
     EntityValidationException,
+    ForbiddenException,
     NotFoundException,
 )
 from account.application.use_cases.user.common.user_output import UserOutput
@@ -16,6 +17,7 @@ from account.domain.user_repository import IUserRepository
 @dataclass
 class UpdateUserInput:
     id: UUID
+    requester_id: UUID
     name: str | None = None
     email: str | None = None
     password: str | None = None
@@ -37,6 +39,9 @@ class UpdateUserUseCase(UseCase):
         self.password_hasher = password_hasher
 
     async def execute(self, input: UpdateUserInput) -> UpdateUserOutput:
+        if input.requester_id != input.id:
+            raise ForbiddenException("You do not have permission to modify this User")
+
         user = await self.user_repo.find_by_id(input.id)
 
         if user is None:
@@ -45,7 +50,7 @@ class UpdateUserUseCase(UseCase):
         if input.name is not None:
             user.change_name(input.name)
 
-        if input.email != None and input.email != user.email:
+        if input.email is not None and input.email != user.email:
             user_with_same_email = await self.user_repo.find_by_email(input.email)
 
             if user_with_same_email:

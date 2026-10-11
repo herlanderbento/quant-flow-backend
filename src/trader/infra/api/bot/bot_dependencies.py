@@ -14,6 +14,7 @@ from trader.application.use_cases.bot.get_bot_by_user import GetBotByUserUseCase
 from trader.domain.repositories.bot_repository import IBotRepository
 from trader.infra.db.bot_postgres_repository import BotPostgresRepository
 from trader.application.use_cases.bot.create_bot import CreateBotUseCase
+from trader.application.use_cases.bot.halt_user_bots import HaltUserBotsUseCase
 
 
 def get_bot_repository(
@@ -42,3 +43,9 @@ def get_change_bot_status_use_case(
     user_repo: IUserRepository = Depends(get_user_repository),
 ) -> ChangeBotStatusUseCase:
     return ChangeBotStatusUseCase(bot_repo, user_repo)
+
+
+def get_halt_user_bots_use_case(
+    bot_repo: IBotRepository = Depends(get_bot_repository),
+) -> HaltUserBotsUseCase:
+    return HaltUserBotsUseCase(bot_repo)

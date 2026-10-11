@@ -55,13 +55,15 @@ class CreateCredentialUseCase(UseCase):
             await self.credential_repository.update(credential)
 
         secret_encrypted = self.encryption.encrypt(input.api_secret)
+        key_encrypted = self.encryption.encrypt(input.api_key)
 
         command = CredentialCreateCommand(
             user_id=input.user_id,
             name=input.name,
-            api_key=input.api_key,
+            api_key=key_encrypted,
             api_secret=secret_encrypted,
             is_testnet=input.is_testnet,
+            api_key_hint=input.api_key[-4:],
         )
 
         credential = Credential.create(command)

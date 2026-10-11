@@ -1,4 +1,4 @@
-from typing import List, Optional, Set, Type
+from typing import List, Optional, Type
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -79,6 +79,8 @@ class UserPostgresRepository(IUserRepository):
         query = select(UserModel)
 
         if props.filter:
+            if props.filter.id:
+                query = query.where(UserModel.id == props.filter.id)
             if props.filter.name:
                 query = query.where(UserModel.name.ilike(f"%{props.filter.name}%"))
             if props.filter.email:

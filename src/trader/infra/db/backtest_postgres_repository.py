@@ -27,8 +27,20 @@ def _to_model(entity: BacktestResult) -> BacktestResultModel:
         max_drawdown_pct=entity.max_drawdown_pct,
         win_rate=entity.win_rate,
         total_trades=entity.total_trades,
+        timeframe=entity.timeframe,
+        profit_factor=entity.profit_factor,
+        expectancy_pct=entity.expectancy_pct,
+        buy_and_hold_return_pct=entity.buy_and_hold_return_pct,
+        exposure_pct=entity.exposure_pct,
+        fees_paid=entity.fees_paid,
+        taker_fee_rate=entity.taker_fee_rate,
+        slippage_bps=entity.slippage_bps,
         created_at=entity.created_at,
     )
+
+
+def _float_or_none(value) -> float | None:
+    return float(value) if value is not None else None
 
 
 def _to_entity(model: BacktestResultModel) -> BacktestResult:
@@ -48,6 +60,14 @@ def _to_entity(model: BacktestResultModel) -> BacktestResult:
         ),
         win_rate=float(model.win_rate) if model.win_rate is not None else None,
         total_trades=model.total_trades,
+        timeframe=model.timeframe,
+        profit_factor=_float_or_none(model.profit_factor),
+        expectancy_pct=_float_or_none(model.expectancy_pct),
+        buy_and_hold_return_pct=_float_or_none(model.buy_and_hold_return_pct),
+        exposure_pct=_float_or_none(model.exposure_pct),
+        fees_paid=_float_or_none(model.fees_paid),
+        taker_fee_rate=_float_or_none(model.taker_fee_rate),
+        slippage_bps=_float_or_none(model.slippage_bps),
         created_at=model.created_at,
     )
 

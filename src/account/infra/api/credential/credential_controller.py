@@ -116,7 +116,8 @@ async def delete_credential(
 ):
     await use_case.execute(
         DeleteCredentialInput(
-            id=CredentialId(value=credential_id)
+            id=CredentialId(value=credential_id),
+            user_id=UserId(value=_auth.user_id),
         )
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

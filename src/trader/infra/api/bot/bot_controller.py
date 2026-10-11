@@ -7,6 +7,7 @@ from pydantic import BaseModel, StringConstraints, Field
 from account.domain.credential import CredentialId
 from account.domain.user import UserId
 from shared.infra.api.auth_dependencies import AuthContext, require_authenticated
+from shared.infra.db.config import settings
 
 from trader.application.use_cases.bot.change_bot_status import (
     ChangeBotStatusInput,
@@ -14,6 +15,11 @@ from trader.application.use_cases.bot.change_bot_status import (
     ChangeBotStatusUseCase,
 )
 from trader.application.use_cases.bot.create_bot import CreateBotInput, CreateBotUseCase
+from trader.application.use_cases.bot.halt_user_bots import (
+    HaltUserBotsInput,
+    HaltUserBotsOutput,
+    HaltUserBotsUseCase,
+)
 from trader.application.use_cases.bot.common.bot_output import BotOutput
 from trader.application.use_cases.bot.get_bot_by_user import (
     GetBotByUserInput,
@@ -25,6 +31,7 @@ from trader.infra.api.bot.bot_dependencies import (
     get_change_bot_status_use_case,
     get_create_bot_use_case,
     get_get_bot_by_user_use_case,
+    get_halt_user_bots_use_case,
 )
 from trader.infra.api.bot.bot_presenter import BotCollectionPresenter
 
@@ -46,8 +53,8 @@ class CreateBotRequest(BaseModel):
     allocated_capital: float = Field(
         gt=0, description="Capital must be greater than zero"
     )
-    stop_loss_pct: float = Field(ge=0, le=100)
-    take_profit_pct: float = Field(ge=0)
+    stop_loss_pct: float = Field(gt=0, le=settings.MAX_STOP_LOSS_PCT)
+    take_profit_pct: float = Field(gt=0)
 
 
 @router.post("", response_model=BotOutput, status_code=status.HTTP_201_CREATED)
@@ -137,3 +144,12 @@ async def deactivate_bot(
         )
     )
     return output
+
+
+@router.post("/halt", response_model=HaltUserBotsOutput, status_code=status.HTTP_200_OK)
+async def halt_bots(
+    _auth: AuthContext = Depends(require_authenticated),
+    use_case: HaltUserBotsUseCase = Depends(get_halt_user_bots_use_case),
+):
+    """Kill switch: stop new entries for all of the user's bots; open positions stay protected."""
+    return await use_case.execute(HaltUserBotsInput(user_id=UserId(value=_auth.user_id)))

@@ -2,13 +2,14 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from shared.application.use_cases import UseCase
-from shared.domain.exceptions import NotFoundException
+from shared.domain.exceptions import ForbiddenException, NotFoundException
 from account.domain.user_repository import IUserRepository
 
 
 @dataclass
 class DeleteUserInput:
     user_id: UUID
+    requester_id: UUID
 
 
 class DeleteUserUseCase(UseCase):
@@ -16,6 +17,9 @@ class DeleteUserUseCase(UseCase):
         self.user_repository = user_repository
 
     async def execute(self, input: DeleteUserInput) -> None:
+        if input.requester_id != input.user_id:
+            raise ForbiddenException("You do not have permission to delete this User")
+
         user = await self.user_repository.find_by_id(input.user_id)
         if user is None:
             raise NotFoundException(f"User with id {input.user_id} not found")

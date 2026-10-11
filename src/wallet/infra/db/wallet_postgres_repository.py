@@ -1,6 +1,5 @@
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from typing import List, Optional, Set, Type
-import uuid
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession

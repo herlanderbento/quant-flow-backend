@@ -10,8 +10,8 @@ class CredentialOutput:
     id: UUID
     user_id: UUID
     name: str
+    # Masked: only the last characters are ever returned.
     api_key: str
-    api_secret: str
     is_testnet: bool
     is_active: bool
     created_at: datetime.datetime
@@ -25,8 +25,7 @@ class CredentialOutput:
             id=credential.id.value,
             user_id=credential.user_id.value,
             name=credential.name,
-            api_key=credential.api_key,
-            api_secret=credential.api_secret,
+            api_key="*" * 12 + (credential.api_key_hint or ""),
             is_testnet=credential.is_testnet,
             is_active=credential.is_active,
             created_at=credential.created_at,

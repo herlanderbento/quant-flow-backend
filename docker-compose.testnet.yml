@@ -1,0 +1,83 @@
+# Isolated Bybit TESTNET stack: its own database/volume and a worker locked to
+# TRADING_MODE=testnet (sandbox endpoint enforced in code). Never touches dev or paper.
+#   docker compose --env-file .env.testnet -f docker-compose.testnet.yml up -d --build
+# See docs/TESTNET.md for the full procedure.
+# Own project name: commands on this file can never act on the dev or paper stacks.
+name: quantflow_testnet
+
+# Network-level guard on top of the code checks: production Bybit hosts resolve to an
+# unroutable address inside this stack, so nothing here can reach the main API.
+x-block-mainnet: &block-mainnet
+  - "api.bybit.com:0.0.0.0"
+  - "api.bytick.com:0.0.0.0"
+  - "api2.bybit.com:0.0.0.0"
+  - "stream.bybit.com:0.0.0.0"
+
+x-testnet-env: &testnet-env
+  DATABASE_URL: postgresql+asyncpg://quantflow_testnet:${TESTNET_POSTGRES_PASSWORD}@testnet_db:5432/quantflow_testnet
+  ENCRYPTION_KEY: ${TESTNET_ENCRYPTION_KEY:?Set TESTNET_ENCRYPTION_KEY}
+  JWT_SECRET_KEY: ${TESTNET_JWT_SECRET_KEY:?Set TESTNET_JWT_SECRET_KEY}
+  ENV: testnet
+  TRADING_MODE: testnet
+  LIVE_TRADING_ENABLED: "false"
+  LOG_FORMAT: json
+
+services:
+  testnet_db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: quantflow_testnet
+      POSTGRES_PASSWORD: ${TESTNET_POSTGRES_PASSWORD:?Set TESTNET_POSTGRES_PASSWORD}
+      POSTGRES_DB: quantflow_testnet
+    ports:
+      - "127.0.0.1:55434:5432"
+    volumes:
+      - testnet_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quantflow_testnet -d quantflow_testnet"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  testnet_worker:
+    extra_hosts: *block-mainnet
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    # The worker never sees the raw exchange keys: it reads the encrypted credential stored
+    # by seed_testnet_bot and decrypts it with this stack's own ENCRYPTION_KEY.
+    environment:
+      <<: *testnet-env
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+    command: sh -c "alembic upgrade head && exec python -m trader.infra.worker"
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "python", "-m", "trader.infra.worker.healthcheck"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    depends_on:
+      testnet_db:
+        condition: service_healthy
+
+  # One-off tools (seed, read-only checks, smoke order). Only this service receives the
+  # testnet keys, and only while it runs:  docker compose ... run --rm testnet_tools python -m ...
+  testnet_tools:
+    extra_hosts: *block-mainnet
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles: ["tools"]
+    environment:
+      <<: *testnet-env
+      BYBIT_TESTNET_API_KEY: ${BYBIT_TESTNET_API_KEY:-}
+      BYBIT_TESTNET_API_SECRET: ${BYBIT_TESTNET_API_SECRET:-}
+    entrypoint: ["sh", "-c", "alembic upgrade head && exec \"$$@\"", "--"]
+    depends_on:
+      testnet_db:
+        condition: service_healthy
+
+volumes:
+  testnet_pg_data:

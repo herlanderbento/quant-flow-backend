@@ -11,9 +11,16 @@ from shared.domain.exceptions import EntityValidationException
 from shared.domain.value_objects import Uuid
 
 
+# Strategies with a working implementation (SMA_RSI is a legacy alias of RSI_SIMPLE).
 VALID_STRATEGY_TYPES = {
     "RSI_SIMPLE",
     "SMA_RSI",
+    # Trades on a validated model only when ML_TRADING_ENABLED=true and never in live mode;
+    # otherwise it holds (no entries) and positions exit through stop-loss/take-profit.
+    "ML_SIGNAL",
+}
+# Named in the roadmap but not implemented: bots cannot be created with them.
+PLANNED_STRATEGY_TYPES = {
     "LSTM_AI_PREDICTOR",
     "SCALPER_LSTM",
 }
@@ -112,6 +119,10 @@ class Bot(AggregateRoot):
         self.updated_at = datetime.datetime.now(datetime.UTC)
 
     def validate(self):
+        if self.strategy_type.upper() in PLANNED_STRATEGY_TYPES:
+            raise EntityValidationException(
+                f"strategy_type '{self.strategy_type}' is planned but not implemented yet."
+            )
         if self.strategy_type.upper() not in VALID_STRATEGY_TYPES:
             raise EntityValidationException(
                 f"strategy_type '{self.strategy_type}' is not valid. "
@@ -130,12 +141,13 @@ class Bot(AggregateRoot):
             raise EntityValidationException(
                 "allocated_capital must be greater than zero."
             )
-        if not (0 <= self.stop_loss_pct <= 100):
+        # A zero stop or target would exit on the very next cycle.
+        if not (0 < self.stop_loss_pct < 100):
             raise EntityValidationException(
-                "stop_loss_pct must be a percentage between 0 and 100."
+                "stop_loss_pct must be a percentage greater than 0 and below 100."
             )
-        if self.take_profit_pct < 0:
-            raise EntityValidationException("take_profit_pct must be positive.")
+        if self.take_profit_pct <= 0:
+            raise EntityValidationException("take_profit_pct must be greater than zero.")
 
         self._validate(
             {

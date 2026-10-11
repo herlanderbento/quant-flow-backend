@@ -14,7 +14,7 @@ from trader.infra.db.sql_models import AIPredictionModel
 
 def _to_model(entity: AIPrediction) -> AIPredictionModel:
     return AIPredictionModel(
-        id=entity.id,
+        id=entity.id.value,
         bot_config_id=entity.bot_id.value,
         symbol=entity.symbol,
         ai_model_version=entity.ai_model_version,
@@ -26,8 +26,8 @@ def _to_model(entity: AIPrediction) -> AIPredictionModel:
 
 def _to_entity(model: AIPredictionModel) -> AIPrediction:
     return AIPrediction(
-        id=AIPredictionId(model.id),
-        bot_id=BotId(str(model.bot_config_id)),
+        id=AIPredictionId(value=model.id),
+        bot_id=BotId(value=model.bot_config_id),
         symbol=model.symbol,
         ai_model_version=model.ai_model_version,
         features_payload=model.features_payload,
@@ -46,7 +46,7 @@ class AIPredictionPostgresRepository(IAIPredictionRepository):
         model = _to_model(entity)
         self.session.add(model)
         await self.session.flush()
-        return AIPredictionId(model.id)
+        return entity.id
 
     async def bulk_insert(self, entities: List[AIPrediction]) -> None:
         models = [_to_model(entity) for entity in entities]
@@ -55,7 +55,7 @@ class AIPredictionPostgresRepository(IAIPredictionRepository):
 
     async def find_by_id(self, entity_id: AIPredictionId) -> Optional[AIPrediction]:
         result = await self.session.execute(
-            select(AIPredictionModel).where(AIPredictionModel.id == entity_id)
+            select(AIPredictionModel).where(AIPredictionModel.id == entity_id.value)
         )
         model = result.scalar_one_or_none()
         return _to_entity(model) if model else None
@@ -65,7 +65,7 @@ class AIPredictionPostgresRepository(IAIPredictionRepository):
         return [_to_entity(model) for model in result.scalars().all()]
 
     async def find_by_ids(self, entity_ids: Set[AIPredictionId]) -> List[AIPrediction]:
-        raw_ids = list(entity_ids)
+        raw_ids = [eid.value for eid in entity_ids]
         result = await self.session.execute(
             select(AIPredictionModel).where(AIPredictionModel.id.in_(raw_ids))
         )
@@ -74,7 +74,7 @@ class AIPredictionPostgresRepository(IAIPredictionRepository):
     async def update(self, entity: AIPrediction) -> None:
         await self.session.execute(
             update(AIPredictionModel)
-            .where(AIPredictionModel.id == entity.id)
+            .where(AIPredictionModel.id == entity.id.value)
             .values(
                 symbol=entity.symbol,
                 ai_model_version=entity.ai_model_version,
@@ -86,7 +86,7 @@ class AIPredictionPostgresRepository(IAIPredictionRepository):
 
     async def delete(self, entity_id: AIPredictionId) -> None:
         await self.session.execute(
-            delete(AIPredictionModel).where(AIPredictionModel.id == entity_id)
+            delete(AIPredictionModel).where(AIPredictionModel.id == entity_id.value)
         )
 
     async def find_by_bot_id(

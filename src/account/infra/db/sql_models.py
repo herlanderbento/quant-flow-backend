@@ -65,8 +65,9 @@ class CredentialModel(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey(FK_USERS_ID, ondelete="CASCADE"), nullable=False
     )
-    name: Mapped[str] = mapped_column(String(50), default="BINANCE")
-    api_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    name: Mapped[str] = mapped_column(String(50), default="BYBIT")
+    api_key: Mapped[str] = mapped_column(String(512), nullable=False)  # Fernet token
+    api_key_hint: Mapped[str | None] = mapped_column(String(8), nullable=True)
     api_secret: Mapped[str] = mapped_column(String(512), nullable=False)
     is_testnet: Mapped[bool] = mapped_column(Boolean, default=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)

@@ -18,6 +18,14 @@ class BacktestOutput:
     win_rate: float | None
     total_trades: int | None
     created_at: datetime.datetime
+    timeframe: str | None = None
+    profit_factor: float | None = None
+    expectancy_pct: float | None = None
+    buy_and_hold_return_pct: float | None = None
+    exposure_pct: float | None = None
+    fees_paid: float | None = None
+    taker_fee_rate: float | None = None
+    slippage_bps: float | None = None
 
     @classmethod
     def from_entity(cls, result: BacktestResult) -> "BacktestOutput":
@@ -34,4 +42,12 @@ class BacktestOutput:
             win_rate=result.win_rate,
             total_trades=result.total_trades,
             created_at=result.created_at,
+            timeframe=result.timeframe,
+            profit_factor=result.profit_factor,
+            expectancy_pct=result.expectancy_pct,
+            buy_and_hold_return_pct=result.buy_and_hold_return_pct,
+            exposure_pct=result.exposure_pct,
+            fees_paid=result.fees_paid,
+            taker_fee_rate=result.taker_fee_rate,
+            slippage_bps=result.slippage_bps,
         )

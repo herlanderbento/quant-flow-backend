@@ -1,4 +1,3 @@
-from typing import Any, List
 
 
 class EntityValidationException(Exception):
@@ -38,3 +37,19 @@ class InvalidUuidException(Exception):
 class GatewayException(Exception):
     def __init__(self, message: str):
         super().__init__(message)
+
+
+class TradingModeException(Exception):
+    """The configured trading mode forbids the requested gateway."""
+
+
+class UnsafeCredentialException(Exception):
+    """The API key has permissions the bot must never hold (e.g. withdrawals)."""
+
+
+class OrderRejectedException(GatewayException):
+    """The exchange definitively refused the order: nothing was executed."""
+
+
+class OrderStateUnknownException(GatewayException):
+    """The order may or may not exist on the exchange; it must be reconciled."""

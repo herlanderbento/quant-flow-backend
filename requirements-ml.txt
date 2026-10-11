@@ -1,0 +1,6 @@
+-r requirements.txt
+# Training and research only; the worker runs models from JSON artifacts without these.
+scikit-learn==1.5.2
+scipy==1.17.1
+joblib==1.6.0
+threadpoolctl==3.7.0

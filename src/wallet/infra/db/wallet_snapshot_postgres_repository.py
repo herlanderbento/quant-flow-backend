@@ -1,6 +1,5 @@
 from datetime import date, datetime, timezone
 from typing import Optional
-import uuid
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +13,7 @@ from shared.utils.datetime_utils import to_aware_utc, to_naive_utc
 
 def _to_model(entity: WalletSnapshot) -> WalletSnapshotModel:
     return WalletSnapshotModel(
-        id=entity.id,
+        id=entity.id.value,
         user_id=entity.user_id.value,
         total_equity_usdt=entity.total_equity_usdt,
         snapshot_date=entity.snapshot_date,
@@ -24,7 +23,7 @@ def _to_model(entity: WalletSnapshot) -> WalletSnapshotModel:
 
 def _to_entity(model: WalletSnapshotModel) -> WalletSnapshot:
     return WalletSnapshot(
-        id=WalletSnapshotId(model.id),
+        id=WalletSnapshotId(value=model.id),
         user_id=UserId(value=model.user_id),
         total_equity_usdt=float(model.total_equity_usdt),
         snapshot_date=model.snapshot_date,
@@ -47,6 +46,9 @@ class WalletSnapshotPostgresRepository(IWalletSnapshotRepository):
         )
         existing = result.scalar_one_or_none()
         if existing:
+            # The day's snapshot tracks the latest sync, i.e. end-of-day equity.
+            existing.total_equity_usdt = total_equity_usdt
+            await self.session.flush()
             return _to_entity(existing)
 
         snapshot = WalletSnapshot(
@@ -62,7 +64,7 @@ class WalletSnapshotPostgresRepository(IWalletSnapshotRepository):
 
     async def find_by_id(self, entity_id: WalletSnapshotId) -> Optional[WalletSnapshot]:
         result = await self.session.execute(
-            select(WalletSnapshotModel).where(WalletSnapshotModel.id == entity_id)
+            select(WalletSnapshotModel).where(WalletSnapshotModel.id == entity_id.value)
         )
         model = result.scalar_one_or_none()
         return _to_entity(model) if model else None

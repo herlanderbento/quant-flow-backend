@@ -35,3 +35,12 @@ class IBotRepository(ISearchableRepository[Bot, BotId]):
     @abstractmethod
     def find_active(self) -> list[Bot]:
         raise NotImplementedError()
+
+    @abstractmethod
+    def find_active_by_user(self, user_id: UserId) -> list[Bot]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def find_needing_processing(self) -> list[Bot]:
+        """Active bots plus inactive bots that still hold a non-final trade."""
+        raise NotImplementedError()

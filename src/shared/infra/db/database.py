@@ -1,6 +1,7 @@
 from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
@@ -15,13 +16,21 @@ DATABASE_URL = settings.DATABASE_URL
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-# Engine async
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=settings.ENV == "development",  # SQL visible only in development
-    pool_size=20,
-    max_overflow=10,
-)
+def build_engine(url: str) -> AsyncEngine:
+    """Engine configuration shared by the app, the worker and the integration tests."""
+    return create_async_engine(
+        url,
+        echo=settings.SQL_ECHO,
+        # Never log bound parameters: they include credentials and user data.
+        hide_parameters=True,
+        pool_size=20,
+        max_overflow=10,
+        # Survive database restarts: stale pooled connections are replaced, not used.
+        pool_pre_ping=True,
+    )
+
+
+engine = build_engine(DATABASE_URL)
 
 # Session factory
 AsyncSessionLocal = async_sessionmaker(

@@ -19,7 +19,8 @@ from trader.domain.repositories.bot_repository import (
     IBotRepository,
 )
 
-from trader.infra.db.sql_models import BotConfigModel
+from trader.domain.trade import ACTIVE_TRADE_STATUSES
+from trader.infra.db.sql_models import BotConfigModel, TradeModel
 
 
 def _to_model(entity: Bot) -> BotConfigModel:
@@ -50,9 +51,10 @@ def _to_entity(model: BotConfigModel) -> Bot:
         symbol=model.symbol,
         strategy_type=model.strategy_type,
         is_active=model.is_active,
-        allocated_capital=model.allocated_capital,
-        stop_loss_pct=model.stop_loss_pct,
-        take_profit_pct=model.take_profit_pct,
+        # asyncpg returns Numeric columns as Decimal; the domain works with float.
+        allocated_capital=float(model.allocated_capital),
+        stop_loss_pct=float(model.stop_loss_pct),
+        take_profit_pct=float(model.take_profit_pct),
         created_at=model.created_at,
         updated_at=model.updated_at,
     )
@@ -214,6 +216,31 @@ class BotPostgresRepository(IBotRepository):
     async def find_active(self) -> List[Bot]:
         result = await self.session.execute(
             select(BotConfigModel).where(BotConfigModel.is_active.is_(True))
+        )
+        return [_to_entity(model) for model in result.scalars().all()]
+
+    async def find_active_by_user(self, user_id: UserId) -> List[Bot]:
+        result = await self.session.execute(
+            select(BotConfigModel).where(
+                BotConfigModel.user_id == user_id.value,
+                BotConfigModel.is_active.is_(True),
+            )
+        )
+        return [_to_entity(model) for model in result.scalars().all()]
+
+    async def find_needing_processing(self) -> List[Bot]:
+        has_active_trade = (
+            select(TradeModel.id)
+            .where(
+                TradeModel.bot_config_id == BotConfigModel.id,
+                TradeModel.status.in_(ACTIVE_TRADE_STATUSES),
+            )
+            .exists()
+        )
+        result = await self.session.execute(
+            select(BotConfigModel).where(
+                BotConfigModel.is_active.is_(True) | has_active_trade
+            )
         )
         return [_to_entity(model) for model in result.scalars().all()]
 

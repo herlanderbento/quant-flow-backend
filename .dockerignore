@@ -4,4 +4,15 @@ __pycache__
 .git
 .cursor
 .pytest_cache
+.mypy_cache
+.ruff_cache
 *.md
+
+# Secrets are injected at runtime (env_file / environment), never baked into an image.
+.env
+.env.*
+!.env.example
+
+# Local data, model artifacts and database backups stay on the host.
+data/
+artifacts/
